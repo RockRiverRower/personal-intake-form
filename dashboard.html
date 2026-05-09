@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DASHBOARD">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>DASHBOARD.exe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg-2: #0f1530;
+      --card: #131a3a;
+      --card-2: #182144;
+      --grid: rgba(0, 245, 255, 0.04);
+      --cyan: #00f5ff;
+      --cyan-dim: #0099aa;
+      --magenta: #ff2eb3;
+      --magenta-dim: #b3207f;
+      --lime: #39ff14;
+      --gold: #ffcc00;
+      --red: #ff003c;
+      --orange: #ff7a00;
+      --text: #e6f7ff;
+      --muted: #6f7ba8;
+      --border: rgba(0, 245, 255, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-text-size-adjust: 100%;
+      line-height: 1.4;
+      letter-spacing: 0.02em;
+    }
+    body {
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      max-width: 720px; margin: 0 auto; min-height: 100vh;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        radial-gradient(ellipse at top, rgba(255, 46, 179, 0.08), transparent 60%),
+        radial-gradient(ellipse at bottom, rgba(0, 245, 255, 0.08), transparent 60%);
+      background-size: 32px 32px, 32px 32px, 100% 100%, 100% 100%;
+      background-attachment: fixed;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 245, 255, 0) 0%, rgba(0, 245, 255, 0) 50%,
+        rgba(0, 245, 255, 0.025) 50%, rgba(0, 245, 255, 0.025) 51%,
+        rgba(0, 245, 255, 0) 51%
+      );
+      background-size: 100% 4px;
+    }
+    main { position: relative; z-index: 2; padding-bottom: 32px; }
+
+    header {
+      padding: 20px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+    }
+    h1 {
+      font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 28px;
+      color: var(--cyan); letter-spacing: 0.08em;
+      text-shadow: 0 0 12px rgba(0, 245, 255, 0.6), 0 0 32px rgba(0, 245, 255, 0.25);
+    }
+    h1 .bracket { color: var(--magenta); text-shadow: 0 0 10px rgba(255, 46, 179, 0.6); }
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--muted); margin-top: 4px; letter-spacing: 0.1em;
+    }
+    .refresh-btn {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: var(--cyan); background: var(--card);
+      border: 1px solid var(--border); padding: 10px 14px;
+      letter-spacing: 0.1em; cursor: pointer;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+      -webkit-tap-highlight-color: transparent;
+    }
+    .refresh-btn:active { background: var(--card-2); }
+    .refresh-btn.loading { color: var(--magenta); }
+
+    /* Stat strip */
+    .stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      margin-bottom: 20px;
+    }
+    .stat {
+      padding: 12px 8px; background: var(--card);
+      border: 1px solid var(--border); text-align: center;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    .stat-num {
+      font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 900;
+      color: var(--cyan); display: block; line-height: 1;
+      text-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+    }
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700;
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-top: 4px; display: block;
+    }
+    .stat.alert .stat-num { color: var(--red); text-shadow: 0 0 10px rgba(255, 0, 60, 0.6); }
+    .stat.warn .stat-num { color: var(--orange); text-shadow: 0 0 10px rgba(255, 122, 0, 0.5); }
+    .stat.go .stat-num { color: var(--lime); text-shadow: 0 0 10px rgba(57, 255, 20, 0.5); }
+
+    /* Section */
+    section.view { margin-bottom: 28px; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    h2 {
+      font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 16px;
+      color: var(--cyan); letter-spacing: 0.1em;
+      text-shadow: 0 0 6px rgba(0, 245, 255, 0.4);
+    }
+    h2.alert { color: var(--red); text-shadow: 0 0 8px rgba(255, 0, 60, 0.5); }
+    h2.warn { color: var(--orange); text-shadow: 0 0 8px rgba(255, 122, 0, 0.5); }
+    h2 .icon { margin-right: 6px; }
+    .count-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: var(--magenta); padding: 2px 8px; background: rgba(255, 46, 179, 0.1);
+      border: 1px solid var(--magenta-dim); letter-spacing: 0.08em;
+    }
+
+    /* Task line */
+    .task {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px; margin-bottom: 6px;
+      background: var(--card); border-left: 3px solid var(--cyan-dim);
+      transition: all 0.15s ease; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .task:hover { background: var(--card-2); border-left-color: var(--cyan); }
+    .task.alert { border-left-color: var(--red); }
+    .task.warn { border-left-color: var(--orange); }
+    .task.mtw { border-left-color: var(--magenta); }
+    .task.fading { opacity: 0.3; pointer-events: none; }
+
+    .task-check {
+      width: 22px; height: 22px; min-width: 22px;
+      border: 2px solid var(--cyan-dim); background: transparent;
+      cursor: pointer; padding: 0; margin-top: 2px;
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .task-check:hover { border-color: var(--cyan); background: rgba(0, 245, 255, 0.1); }
+    .task-check::after {
+      content: ''; display: block; width: 10px; height: 10px;
+      margin: 4px; background: var(--lime); opacity: 0;
+      transition: opacity 0.2s ease; box-shadow: 0 0 8px var(--lime);
+    }
+    .task-check.checked::after { opacity: 1; }
+
+    .task-body { flex: 1; min-width: 0; }
+    .task-title {
+      font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 600;
+      color: var(--text); line-height: 1.3; margin-bottom: 4px;
+      word-wrap: break-word;
+    }
+    .task-meta {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--muted); letter-spacing: 0.06em;
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .task-meta span { white-space: nowrap; }
+    .task-meta .area { color: var(--cyan); }
+    .task-meta .deadline { color: var(--red); font-weight: 700; }
+    .task-meta .deadline.future { color: var(--gold); }
+    .task-meta .energy-deep { color: var(--magenta); }
+    .task-meta .energy-quick { color: var(--lime); }
+
+    .empty {
+      padding: 16px; text-align: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--muted); letter-spacing: 0.08em;
+      background: var(--card); border: 1px dashed var(--border);
+    }
+
+    .footer-link {
+      text-align: center; padding: 16px 0 0;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: var(--muted); letter-spacing: 0.08em;
+    }
+    .footer-link a {
+      color: var(--magenta); text-decoration: none; font-weight: 700;
+      text-shadow: 0 0 8px rgba(255, 46, 179, 0.4);
+      border-bottom: 1px solid var(--magenta-dim); padding-bottom: 2px;
+    }
+
+    .loading-bar {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--magenta), transparent);
+      transform: translateX(-100%);
+      z-index: 100;
+    }
+    .loading-bar.active { animation: loadbar 1.2s ease-in-out infinite; }
+    @keyframes loadbar { to { transform: translateX(100%); } }
+
+    .toast {
+      position: fixed; left: 16px; right: 16px; bottom: 16px;
+      padding: 14px 16px;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+      letter-spacing: 0.05em;
+      transform: translateY(160%); transition: transform 0.3s ease; z-index: 1000;
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      max-width: 720px; margin: 0 auto;
+    }
+    .toast.show { transform: translateY(0); }
+    .toast.success { background: rgba(57, 255, 20, 0.15); color: var(--lime); box-shadow: inset 0 0 0 1px var(--lime); }
+    .toast.error { background: rgba(255, 0, 60, 0.15); color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+  </style>
+</head>
+<body>
+
+<div class="loading-bar" id="loadbar"></div>
+
+<main>
+<header>
+  <div>
+    <h1><span class="bracket">[</span>STATUS<span class="bracket">]</span></h1>
+    <div class="subtitle" id="subtitle">// LOADING...</div>
+  </div>
+  <button class="refresh-btn" id="refresh-btn">↻ REFRESH</button>
+</header>
+
+<div class="stats" id="stats">
+  <div class="stat"><span class="stat-num" id="c-overdue">·</span><span class="stat-label">OVERDUE</span></div>
+  <div class="stat"><span class="stat-num" id="c-today">·</span><span class="stat-label">TODAY</span></div>
+  <div class="stat"><span class="stat-num" id="c-tomorrow">·</span><span class="stat-label">TOMORROW</span></div>
+  <div class="stat"><span class="stat-num" id="c-inbox">·</span><span class="stat-label">INBOX</span></div>
+</div>
+
+<section class="view" id="view-overdue">
+  <div class="section-header">
+    <h2 class="alert"><span class="icon">⚠</span>OVERDUE</h2>
+    <span class="count-badge" id="badge-overdue">0</span>
+  </div>
+  <div id="list-overdue"></div>
+</section>
+
+<section class="view" id="view-today">
+  <div class="section-header">
+    <h2><span class="icon">▸</span>TODAY</h2>
+    <span class="count-badge" id="badge-today">0</span>
+  </div>
+  <div id="list-today"></div>
+</section>
+
+<section class="view" id="view-mtw">
+  <div class="section-header">
+    <h2 class="warn"><span class="icon">◆</span>MUST THIS WEEK</h2>
+    <span class="count-badge" id="badge-mtw">0</span>
+  </div>
+  <div id="list-mtw"></div>
+</section>
+
+<section class="view" id="view-tomorrow">
+  <div class="section-header">
+    <h2><span class="icon">▷</span>TOMORROW</h2>
+    <span class="count-badge" id="badge-tomorrow">0</span>
+  </div>
+  <div id="list-tomorrow"></div>
+</section>
+
+<section class="view" id="view-waiting">
+  <div class="section-header">
+    <h2><span class="icon">◌</span>WAITING</h2>
+    <span class="count-badge" id="badge-waiting">0</span>
+  </div>
+  <div id="list-waiting"></div>
+</section>
+
+<div class="footer-link">
+  <a href="index.html">▸ NEW CAPTURE</a>
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ────────────────────────────────────────────────────
+  // CONFIG — set this after deploying the Apps Script
+  // ────────────────────────────────────────────────────
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr51tCKEl9EYBZzHuhaTPDEpIgeSnnbTr3Rr33L1-b19Rm5zU93jPBMxwm0uVYhe-lnw/exec';
+
+  const loadbar = document.getElementById('loadbar');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const subtitle = document.getElementById('subtitle');
+  const toast = document.getElementById('toast');
+
+  function showToast(msg, kind) {
+    toast.textContent = msg;
+    toast.className = 'toast show ' + kind;
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  function startLoad() { loadbar.classList.add('active'); refreshBtn.classList.add('loading'); refreshBtn.textContent = 'SYNCING'; }
+  function endLoad() { loadbar.classList.remove('active'); refreshBtn.classList.remove('loading'); refreshBtn.textContent = '↻ REFRESH'; }
+
+  function fmtDate(s, today) {
+    if (!s) return '';
+    const d = new Date(s + 'T00:00:00');
+    const t = new Date(today + 'T00:00:00');
+    const diff = Math.round((d - t) / 86400000);
+    if (diff === 0) return 'today';
+    if (diff === 1) return 'tomorrow';
+    if (diff === -1) return 'yesterday';
+    if (diff < 0) return Math.abs(diff) + 'd late';
+    if (diff < 7) return 'in ' + diff + 'd';
+    return s.slice(5);  // MM-DD
+  }
+
+  function renderTask(t, today, kind) {
+    const div = document.createElement('div');
+    div.className = 'task' + (kind ? ' ' + kind : '') + (t.mtw ? ' mtw' : '');
+    div.dataset.row = t.row;
+
+    const meta = [];
+    if (t.area) meta.push(`<span class="area">${t.area}</span>`);
+    if (t.energy) {
+      const cls = t.energy === 'Deep' ? 'energy-deep' : t.energy === 'Quick' ? 'energy-quick' : '';
+      meta.push(`<span class="${cls}">⚡${t.energy.toLowerCase()}</span>`);
+    }
+    if (t.duration) meta.push(`<span>⏱${t.duration}</span>`);
+    if (t.deadline) {
+      const cls = t.deadline < today ? 'deadline' : 'deadline future';
+      meta.push(`<span class="${cls}">⚠${fmtDate(t.deadline, today)}</span>`);
+    }
+
+    div.innerHTML = `
+      <button class="task-check" aria-label="mark done"></button>
+      <div class="task-body">
+        <div class="task-title">${escapeHTML(t.title || '(untitled)')}</div>
+        <div class="task-meta">${meta.join('')}</div>
+      </div>
+    `;
+
+    div.querySelector('.task-check').addEventListener('click', (e) => {
+      e.stopPropagation();
+      markDone(t.row, div);
+    });
+    return div;
+  }
+
+  function escapeHTML(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function markDone(row, el) {
+    const btn = el.querySelector('.task-check');
+    btn.classList.add('checked');
+    el.classList.add('fading');
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'mark-done', row: row }),
+      });
+      const j = await res.json();
+      if (j.ok) {
+        showToast('// DONE · row ' + row, 'success');
+        setTimeout(() => el.remove(), 600);
+      } else {
+        btn.classList.remove('checked');
+        el.classList.remove('fading');
+        showToast('// ERR · ' + (j.error || 'Failed'), 'error');
+      }
+    } catch (err) {
+      btn.classList.remove('checked');
+      el.classList.remove('fading');
+      showToast('// NET_ERR · ' + err.message, 'error');
+    }
+  }
+
+  function renderList(containerId, tasks, today, kind) {
+    const c = document.getElementById(containerId);
+    c.innerHTML = '';
+    if (!tasks || tasks.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = '// EMPTY';
+      c.appendChild(empty);
+      return;
+    }
+    tasks.forEach(t => c.appendChild(renderTask(t, today, kind)));
+  }
+
+  async function load() {
+    startLoad();
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=dashboard');
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'Failed');
+
+      const today = j.today;
+      const ts = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      subtitle.textContent = `// SYNC ${ts} · ${today}`;
+
+      // Stats
+      document.getElementById('c-overdue').textContent = j.counts.overdue;
+      document.getElementById('c-today').textContent = j.counts.today;
+      document.getElementById('c-tomorrow').textContent = j.counts.tomorrow;
+      document.getElementById('c-inbox').textContent = j.counts.inbox;
+      document.querySelectorAll('.stat')[0].classList.toggle('alert', j.counts.overdue > 0);
+      document.querySelectorAll('.stat')[1].classList.toggle('warn', j.counts.today > 5);
+      document.querySelectorAll('.stat')[3].classList.toggle('warn', j.counts.inbox > 10);
+
+      // Badges
+      document.getElementById('badge-overdue').textContent = j.counts.overdue;
+      document.getElementById('badge-today').textContent = j.counts.today;
+      document.getElementById('badge-tomorrow').textContent = j.counts.tomorrow;
+      document.getElementById('badge-mtw').textContent = j.counts.mustThisWeek;
+      document.getElementById('badge-waiting').textContent = j.counts.waiting;
+
+      // Lists
+      renderList('list-overdue', j.overdue, today, 'alert');
+      renderList('list-today', j.todayList, today);
+      renderList('list-tomorrow', j.tomorrowList, today);
+      renderList('list-mtw', j.mustThisWeek, today, 'warn');
+      renderList('list-waiting', j.waiting, today);
+
+      // Hide empty sections that aren't critical
+      document.getElementById('view-overdue').style.display = j.counts.overdue > 0 ? 'block' : 'none';
+      document.getElementById('view-tomorrow').style.display = j.counts.tomorrow > 0 ? 'block' : 'none';
+      document.getElementById('view-mtw').style.display = j.counts.mustThisWeek > 0 ? 'block' : 'none';
+      document.getElementById('view-waiting').style.display = j.counts.waiting > 0 ? 'block' : 'none';
+
+    } catch (err) {
+      subtitle.textContent = '// ERR · ' + err.message;
+      showToast('// ERR · ' + err.message, 'error');
+    } finally {
+      endLoad();
+    }
+  }
+
+  refreshBtn.addEventListener('click', load);
+
+  // Pull-to-refresh
+  let touchStart = 0;
+  window.addEventListener('touchstart', (e) => { touchStart = e.touches[0].clientY; }, { passive: true });
+  window.addEventListener('touchend', (e) => {
+    const delta = e.changedTouches[0].clientY - touchStart;
+    if (window.scrollY === 0 && delta > 80) load();
+  }, { passive: true });
+
+  load();
+</script>
+
+</body>
+</html>

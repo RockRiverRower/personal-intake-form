@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CAPTURE">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>CAPTURE.exe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg-2: #0f1530;
+      --card: #131a3a;
+      --card-2: #182144;
+      --grid: rgba(0, 245, 255, 0.04);
+      --cyan: #00f5ff;
+      --cyan-dim: #0099aa;
+      --magenta: #ff2eb3;
+      --magenta-dim: #b3207f;
+      --lime: #39ff14;
+      --gold: #ffcc00;
+      --red: #ff003c;
+      --text: #e6f7ff;
+      --muted: #6f7ba8;
+      --border: rgba(0, 245, 255, 0.25);
+      --tap: 56px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-text-size-adjust: 100%;
+      line-height: 1.4;
+      letter-spacing: 0.02em;
+    }
+    body {
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+      max-width: 720px; margin: 0 auto; min-height: 100vh;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        radial-gradient(ellipse at top, rgba(255, 46, 179, 0.08), transparent 60%),
+        radial-gradient(ellipse at bottom, rgba(0, 245, 255, 0.08), transparent 60%);
+      background-size: 32px 32px, 32px 32px, 100% 100%, 100% 100%;
+      background-attachment: fixed;
+    }
+    /* Scanline overlay */
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background: linear-gradient(
+        to bottom,
+        rgba(0, 245, 255, 0) 0%,
+        rgba(0, 245, 255, 0) 50%,
+        rgba(0, 245, 255, 0.025) 50%,
+        rgba(0, 245, 255, 0.025) 51%,
+        rgba(0, 245, 255, 0) 51%
+      );
+      background-size: 100% 4px;
+    }
+    main { position: relative; z-index: 2; }
+
+    header { padding: 20px 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    h1 {
+      font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 32px;
+      color: var(--cyan); letter-spacing: 0.08em;
+      text-shadow: 0 0 12px rgba(0, 245, 255, 0.6), 0 0 32px rgba(0, 245, 255, 0.25);
+    }
+    h1 .bracket { color: var(--magenta); text-shadow: 0 0 10px rgba(255, 46, 179, 0.6); }
+    h1 .cursor { color: var(--magenta); animation: blink 1s steps(2) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--muted); margin-top: 4px; letter-spacing: 0.1em;
+    }
+
+    h2 {
+      font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 18px;
+      color: var(--cyan); letter-spacing: 0.06em; margin: 16px 0 14px;
+      text-shadow: 0 0 8px rgba(0, 245, 255, 0.4);
+    }
+    h2::before { content: '▸ '; color: var(--magenta); }
+
+    /* Type selector grid */
+    .types {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+      padding: 8px 0 20px;
+    }
+    .type-btn {
+      min-height: var(--tap); padding: 14px 12px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 0;
+      font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700;
+      color: var(--cyan); letter-spacing: 0.08em; text-align: left;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: all 0.15s ease;
+    }
+    .type-btn::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+      clip-path: inherit;
+    }
+    .type-btn:active { transform: translateY(1px); }
+    .type-btn.selected {
+      background: linear-gradient(135deg, rgba(0, 245, 255, 0.15), rgba(255, 46, 179, 0.15));
+      color: var(--cyan);
+      box-shadow: 0 0 16px rgba(0, 245, 255, 0.5), inset 0 0 16px rgba(0, 245, 255, 0.15);
+      border-color: var(--cyan);
+      text-shadow: 0 0 8px rgba(0, 245, 255, 0.8);
+    }
+    .type-btn.selected::after { box-shadow: inset 0 0 0 1px var(--cyan); }
+    .type-btn .emoji { font-size: 20px; filter: drop-shadow(0 0 6px rgba(0, 245, 255, 0.4)); }
+
+    /* Form sections */
+    .form-section { display: none; padding: 16px 0 24px; }
+    .form-section.active { display: block; animation: fade-in 0.25s ease; }
+    @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .field { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: var(--cyan); letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    label::before { content: '> '; color: var(--magenta); }
+    .req { color: var(--magenta); text-shadow: 0 0 4px var(--magenta-dim); }
+
+    input[type="text"], input[type="date"], input[type="datetime-local"], input[type="email"],
+    input[type="tel"], input[type="url"], select, textarea {
+      width: 100%; min-height: var(--tap); padding: 12px 14px;
+      font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 500;
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--border); border-radius: 0;
+      -webkit-appearance: none;
+      transition: all 0.15s ease;
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); font-style: italic; }
+    textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--cyan);
+      box-shadow: 0 0 0 1px var(--cyan), 0 0 16px rgba(0, 245, 255, 0.4);
+      background: var(--card-2);
+    }
+    select { cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--cyan) 50%), linear-gradient(135deg, var(--cyan) 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 12px) center; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 32px; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+    .check {
+      display: flex; align-items: center; gap: 12px;
+      min-height: var(--tap); padding: 0 4px; cursor: pointer;
+      margin-bottom: 16px;
+    }
+    .check input {
+      width: 24px; height: 24px; margin: 0;
+      accent-color: var(--magenta); cursor: pointer;
+    }
+    .check label {
+      display: inline; margin: 0; font-weight: 600; font-size: 16px; color: var(--text);
+      letter-spacing: 0.04em; text-transform: none; font-family: 'Rajdhani', sans-serif;
+    }
+    .check label::before { content: ''; }
+
+    button.primary {
+      width: 100%; min-height: 64px; padding: 18px;
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+      color: #0a0e1a; border: none; border-radius: 0;
+      font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
+      letter-spacing: 0.18em; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      box-shadow: 0 0 24px rgba(0, 245, 255, 0.4), 0 0 48px rgba(255, 46, 179, 0.25);
+      transition: all 0.15s ease;
+      margin-top: 8px;
+    }
+    button.primary:active { transform: translateY(2px); box-shadow: 0 0 12px rgba(0, 245, 255, 0.3); }
+    button.primary:disabled {
+      background: var(--card); color: var(--muted);
+      box-shadow: none; cursor: not-allowed;
+    }
+
+    .toast {
+      position: fixed; left: 16px; right: 16px; bottom: 16px;
+      padding: 16px 18px;
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+      letter-spacing: 0.05em;
+      transform: translateY(160%); transition: transform 0.3s ease;
+      z-index: 1000;
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      max-width: 720px; margin: 0 auto;
+    }
+    .toast.show { transform: translateY(0); }
+    .toast.success {
+      background: rgba(57, 255, 20, 0.15); color: var(--lime);
+      box-shadow: 0 0 24px rgba(57, 255, 20, 0.4), inset 0 0 0 1px var(--lime);
+    }
+    .toast.error {
+      background: rgba(255, 0, 60, 0.15); color: var(--red);
+      box-shadow: 0 0 24px rgba(255, 0, 60, 0.4), inset 0 0 0 1px var(--red);
+    }
+
+    .footer-link {
+      text-align: center; padding: 24px 0;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: var(--muted); letter-spacing: 0.08em;
+    }
+    .footer-link a {
+      color: var(--magenta); text-decoration: none; font-weight: 700;
+      text-shadow: 0 0 8px rgba(255, 46, 179, 0.4);
+      border-bottom: 1px solid var(--magenta-dim); padding-bottom: 2px;
+    }
+    .footer-link a:hover { text-shadow: 0 0 16px var(--magenta); }
+
+    .help {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5;
+      color: var(--muted); margin-top: 8px; letter-spacing: 0.04em;
+      padding-left: 12px; border-left: 2px solid var(--magenta-dim);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--gold); background: rgba(255, 204, 0, 0.08);
+      padding: 1px 4px; font-size: 11px; border-radius: 0;
+    }
+  </style>
+</head>
+<body>
+
+<main>
+<header>
+  <h1><span class="bracket">[</span>CAPTURE<span class="bracket">]</span><span class="cursor">_</span></h1>
+  <div class="subtitle">// PERSONAL INTAKE TERMINAL · v1.0</div>
+</header>
+
+<div class="types" id="types">
+  <button class="type-btn" data-type="task"><span class="emoji">✅</span><span>TASK</span></button>
+  <button class="type-btn" data-type="idea"><span class="emoji">💡</span><span>IDEA</span></button>
+  <button class="type-btn" data-type="book"><span class="emoji">📚</span><span>BOOK</span></button>
+  <button class="type-btn" data-type="show"><span class="emoji">📺</span><span>SHOW</span></button>
+  <button class="type-btn" data-type="event"><span class="emoji">📅</span><span>EVENT</span></button>
+  <button class="type-btn" data-type="contact"><span class="emoji">👤</span><span>CONTACT</span></button>
+  <button class="type-btn" data-type="clip"><span class="emoji">🔖</span><span>CLIP</span></button>
+  <button class="type-btn" data-type="project"><span class="emoji">🎯</span><span>PROJECT</span></button>
+</div>
+
+<form id="intake-form" autocomplete="off">
+
+  <!-- TASK -->
+  <section class="form-section" data-type="task">
+    <h2>NEW TASK</h2>
+    <div class="field"><label>Title <span class="req">*</span></label><input name="title" required></div>
+    <div class="row">
+      <div class="field"><label>Intended Date</label><input type="date" name="intendedDate"></div>
+      <div class="field"><label>Hard Deadline</label><input type="date" name="deadline"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Duration</label>
+        <select name="duration"><option value="">—</option><option>15m</option><option>30m</option><option>1h</option><option>2h</option><option>half-day</option><option>full-day</option></select>
+      </div>
+      <div class="field"><label>Energy</label>
+        <select name="energy"><option value="">—</option><option>Quick</option><option>Normal</option><option>Deep</option></select>
+      </div>
+    </div>
+    <div class="check"><input type="checkbox" id="task-mtw" name="mustThisWeek"><label for="task-mtw">Must this week</label></div>
+    <div class="row">
+      <div class="field"><label>Project / Area</label><input name="project" placeholder="Sermon Prep, Rental Admin..."></div>
+      <div class="field"><label>Status</label>
+        <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Project <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — links this task to a larger project)</span></label>
+        <select name="parent" id="task-parent">
+          <option value="">— none (standalone) —</option>
+        </select>
+      </div>
+      <div class="field"><label>Recurrence <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — repeats automatically)</span></label>
+        <select name="recurrence">
+          <option value="">— none —</option>
+          <option>Daily</option>
+          <option>Weekly</option>
+          <option>Biweekly</option>
+          <option>Monthly</option>
+          <option>Quarterly</option>
+          <option>Yearly</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>People <span style="color:var(--muted);text-transform:none;font-weight:400;">(person or comma-separated)</span></label>
+        <input name="people" id="task-people" list="people-options" placeholder="Larry, Carol...">
+        <datalist id="people-options"></datalist>
+      </div>
+      <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+    </div>
+    <div class="field"><label>Email URL <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — paste Gmail link)</span></label>
+      <input type="url" name="emailUrl" inputmode="url" autocapitalize="off" placeholder="https://mail.google.com/mail/u/0/#inbox/...">
+    </div>
+    <div class="field"><label>Checklist <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — steps to complete this task)</span></label>
+      <textarea name="checklist" placeholder="- [ ] find the policy doc
+- [ ] attach to email to Amy
+- [ ] send"></textarea>
+    </div>
+    <div class="field"><label>Notes</label><textarea name="notes"></textarea></div>
+    <p class="help" id="recurrence-help" style="display:none">// RECURRING → A row will be added to <code>_recurrence_rules</code>. Future occurrences appear automatically each cycle even if you delete the original task. To stop, set <code>Active=FALSE</code> on the rule.</p>
+  </section>
+
+  <!-- IDEA -->
+  <section class="form-section" data-type="idea">
+    <h2>NEW IDEA</h2>
+    <div class="field"><label>Title <span class="req">*</span></label><input name="title" required placeholder="One-line idea"></div>
+    <div class="field"><label>Description / context</label><textarea name="notes"></textarea></div>
+    <div class="row">
+      <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+      <div class="field"><label>Topic / MOC</label><input name="topic"></div>
+    </div>
+    <p class="help">// QUEUED → drains to <code>00 INBOX/Ideas/</code> + Idea Pipeline kanban when local terminal is online.</p>
+  </section>
+
+  <!-- BOOK -->
+  <section class="form-section" data-type="book">
+    <h2>NEW BOOK</h2>
+    <div class="field"><label>Title <span class="req">*</span></label><input name="title" required></div>
+    <div class="field"><label>Author</label><input name="author"></div>
+    <div class="row">
+      <div class="field"><label>Status</label>
+        <select name="status"><option>To Read</option><option>Reading</option><option>Read</option><option>Abandoned</option></select>
+      </div>
+      <div class="field"><label>Type</label>
+        <select name="bookType"><option>Book</option><option>Audiobook</option><option>eBook</option></select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Category</label><input name="category" placeholder="Theology, Leadership..."></div>
+      <div class="field"><label>Recommended By</label><input name="recommendedBy"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea name="notes"></textarea></div>
+  </section>
+
+  <!-- SHOW -->
+  <section class="form-section" data-type="show">
+    <h2>NEW SHOW / MOVIE</h2>
+    <div class="field"><label>Title <span class="req">*</span></label><input name="title" required></div>
+    <div class="row">
+      <div class="field"><label>Status</label>
+        <select name="status"><option>To Watch</option><option>Watching</option><option>Watched</option><option>Abandoned</option></select>
+      </div>
+      <div class="field"><label>Platform</label><input name="platform" placeholder="Netflix, Apple TV+..."></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Genre</label><input name="genre"></div>
+      <div class="field"><label>Recommended By</label><input name="recommendedBy"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea name="notes"></textarea></div>
+  </section>
+
+  <!-- EVENT -->
+  <section class="form-section" data-type="event">
+    <h2>NEW CALENDAR EVENT</h2>
+    <div class="field"><label>Title <span class="req">*</span></label><input name="title" required></div>
+    <div class="field"><label>Calendar</label>
+      <select name="calendarId" id="event-calendar">
+        <option value="">— loading… —</option>
+      </select>
+    </div>
+    <div class="check"><input type="checkbox" id="event-allday" name="allDay"><label for="event-allday">All day</label></div>
+    <div class="row">
+      <div class="field"><label>Start <span class="req">*</span></label><input type="datetime-local" name="start" required></div>
+      <div class="field"><label>End</label><input type="datetime-local" name="end"></div>
+    </div>
+    <div class="field"><label>Location</label><input name="location"></div>
+    <div class="field"><label>Description</label><textarea name="description"></textarea></div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="form-section" data-type="contact">
+    <h2>NEW CONTACT</h2>
+    <div class="field"><label>Name <span class="req">*</span></label><input name="name" required placeholder="First Last"></div>
+    <div class="row">
+      <div class="field"><label>Email</label><input type="email" name="email" autocapitalize="off"></div>
+      <div class="field"><label>Phone</label><input type="tel" name="phone"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Organization</label><input name="org"></div>
+      <div class="field"><label>Title / Role</label><input name="title"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea name="notes"></textarea></div>
+  </section>
+
+  <!-- CLIP -->
+  <section class="form-section" data-type="clip">
+    <h2>SAVE ARTICLE / VIDEO</h2>
+    <div class="field"><label>URL</label><input type="url" name="url" inputmode="url" autocapitalize="off" placeholder="https://..."></div>
+    <div class="field"><label>Why save this?</label><input name="why" placeholder="One-liner — connects to X"></div>
+    <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+    <div class="field"><label>Topic / MOC</label><input name="topic"></div>
+    <div class="field"><label>Or paste body (no URL)</label><textarea name="body"></textarea></div>
+    <p class="help">// QUEUED → fetched, summarized, written to <code>02 LITERATURE/</code> when local terminal drains the queue.</p>
+  </section>
+
+  <!-- PROJECT -->
+  <section class="form-section" data-type="project">
+    <h2>NEW PROJECT</h2>
+    <div class="field"><label>Project type <span class="req">*</span></label>
+      <select name="projectKind" id="project-kind">
+        <option value="">— pick one —</option>
+        <option value="creative">CREATIVE → Obsidian</option>
+        <option value="admin">ADMIN → Tasks sheet</option>
+      </select>
+    </div>
+    <div class="field"><label>Name <span class="req">*</span></label><input name="name" required></div>
+    <div class="field" id="creative-subtype" style="display:none">
+      <label>Subtype</label>
+      <select name="subtype"><option>Sermon</option><option>Writing</option><option>Other</option></select>
+    </div>
+    <div class="field" id="admin-deadline" style="display:none">
+      <label>Hard Deadline</label><input type="date" name="deadline">
+    </div>
+    <div class="field"><label>Description</label><textarea name="description"></textarea></div>
+    <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+  </section>
+
+  <button type="submit" class="primary" id="submit-btn" disabled>SELECT TYPE</button>
+</form>
+
+<div class="footer-link">
+  <a href="dashboard.html">▸ OPEN DASHBOARD</a>
+</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ────────────────────────────────────────────────────
+  // CONFIG — set this after deploying the Apps Script
+  // ────────────────────────────────────────────────────
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr51tCKEl9EYBZzHuhaTPDEpIgeSnnbTr3Rr33L1-b19Rm5zU93jPBMxwm0uVYhe-lnw/exec';
+
+  const types = document.querySelectorAll('.type-btn');
+  const sections = document.querySelectorAll('.form-section');
+  const submitBtn = document.getElementById('submit-btn');
+  const form = document.getElementById('intake-form');
+  const toast = document.getElementById('toast');
+  let selectedType = null;
+
+  types.forEach(btn => {
+    btn.addEventListener('click', () => {
+      types.forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedType = btn.dataset.type;
+      sections.forEach(s => s.classList.toggle('active', s.dataset.type === selectedType));
+      submitBtn.disabled = false;
+      submitBtn.textContent = '▸ EXECUTE — ' + btn.querySelector('span:last-child').textContent;
+      if (selectedType === 'task') { loadParents(); loadPeople(); }
+      if (selectedType === 'event') { loadCalendars(); }
+      window.scrollTo({ top: btn.getBoundingClientRect().bottom + window.scrollY - 80, behavior: 'smooth' });
+    });
+  });
+
+  // Populate Parent dropdown lazily on first task-type click.
+  let parentsLoaded = false;
+  async function loadParents() {
+    if (parentsLoaded) return;
+    parentsLoaded = true;
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=parents');
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.parents)) return;
+      const sel = document.getElementById('task-parent');
+      data.parents.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p; opt.textContent = p;
+        sel.appendChild(opt);
+      });
+    } catch (err) {
+      // Silent — parent dropdown stays as "none". Form still works.
+    }
+  }
+
+  // Populate Calendar dropdown lazily on first event-type click.
+  // Default (Work) is pre-selected by the Apps Script's sort + isDefault flag.
+  let calendarsLoaded = false;
+  async function loadCalendars() {
+    if (calendarsLoaded) return;
+    calendarsLoaded = true;
+    const sel = document.getElementById('event-calendar');
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=calendars');
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.calendars)) {
+        sel.innerHTML = '<option value="">— default —</option>';
+        return;
+      }
+      sel.innerHTML = '';
+      data.calendars.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.name + (c.isDefault ? ' (default)' : '');
+        if (c.isDefault) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    } catch (err) {
+      sel.innerHTML = '<option value="">— default —</option>';
+    }
+  }
+
+  // Populate People datalist lazily on first task-type click.
+  let peopleLoaded = false;
+  async function loadPeople() {
+    if (peopleLoaded) return;
+    peopleLoaded = true;
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=people');
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.people)) return;
+      const dl = document.getElementById('people-options');
+      data.people.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        dl.appendChild(opt);
+      });
+    } catch (err) {
+      // Silent — datalist stays empty. Free-text input still works.
+    }
+  }
+
+  // Show help text under recurrence dropdown when a value is picked.
+  document.querySelector('select[name="recurrence"]').addEventListener('change', (e) => {
+    document.getElementById('recurrence-help').style.display = e.target.value ? 'block' : 'none';
+  });
+
+  document.getElementById('project-kind').addEventListener('change', (e) => {
+    document.getElementById('creative-subtype').style.display = e.target.value === 'creative' ? 'block' : 'none';
+    document.getElementById('admin-deadline').style.display = e.target.value === 'admin' ? 'block' : 'none';
+  });
+
+  function showToast(msg, kind) {
+    toast.textContent = msg;
+    toast.className = 'toast show ' + kind;
+    setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  function collect(section) {
+    const out = {};
+    section.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.type === 'checkbox') out[el.name] = el.checked;
+      else if (el.value) out[el.name] = el.value;
+    });
+    return out;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedType) return;
+    const section = document.querySelector('.form-section.active');
+    const data = collect(section);
+
+    let submissionType = selectedType;
+    if (selectedType === 'project') {
+      if (data.projectKind === 'creative') submissionType = 'creative-project';
+      else if (data.projectKind === 'admin') submissionType = 'admin-project';
+      else { showToast('// ERR: Pick a project type', 'error'); return; }
+      delete data.projectKind;
+    }
+
+    const payload = Object.assign({ submissionType }, data);
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'TRANSMITTING...';
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('// OK · ' + (result.target || 'WRITTEN'), 'success');
+        form.reset();
+        document.getElementById('recurrence-help').style.display = 'none';
+        types.forEach(b => b.classList.remove('selected'));
+        sections.forEach(s => s.classList.remove('active'));
+        selectedType = null;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'SELECT TYPE';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        showToast('// ERR · ' + (result.error || 'FAILED'), 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '▸ RETRY';
+      }
+    } catch (err) {
+      showToast('// NET_ERR · ' + err.message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = '▸ RETRY';
+    }
+  });
+</script>
+
+</body>
+</html>
