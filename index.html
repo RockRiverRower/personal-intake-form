@@ -38,6 +38,7 @@
       -webkit-text-size-adjust: 100%;
       line-height: 1.4;
       letter-spacing: 0.02em;
+      color-scheme: dark;
     }
     body {
       padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
@@ -133,22 +134,31 @@
     label::before { content: '> '; color: var(--magenta); }
     .req { color: var(--magenta); text-shadow: 0 0 4px var(--magenta-dim); }
 
-    input[type="text"], input[type="date"], input[type="datetime-local"], input[type="email"],
+    input, input[type="text"], input[type="date"], input[type="datetime-local"], input[type="email"],
     input[type="tel"], input[type="url"], select, textarea {
       width: 100%; min-height: var(--tap); padding: 12px 14px;
       font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 500;
       background: var(--card); color: var(--text);
+      -webkit-text-fill-color: var(--text);
+      caret-color: var(--cyan);
       border: 1px solid var(--border); border-radius: 0;
       -webkit-appearance: none;
       transition: all 0.15s ease;
     }
-    input::placeholder, textarea::placeholder { color: var(--muted); font-style: italic; }
+    input::placeholder, textarea::placeholder { color: var(--muted); -webkit-text-fill-color: var(--muted); font-style: italic; }
     textarea { min-height: 110px; resize: vertical; line-height: 1.45; }
 
     input:focus, select:focus, textarea:focus {
       outline: none; border-color: var(--cyan);
       box-shadow: 0 0 0 1px var(--cyan), 0 0 16px rgba(0, 245, 255, 0.4);
       background: var(--card-2);
+      color: var(--text);
+      -webkit-text-fill-color: var(--text);
+    }
+    /* iOS autofill yellow + dark mode override */
+    input:-webkit-autofill, input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text);
+      -webkit-box-shadow: 0 0 0 1000px var(--card) inset;
     }
     select { cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--cyan) 50%), linear-gradient(135deg, var(--cyan) 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 12px) center; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; padding-right: 32px; }
 
@@ -271,7 +281,10 @@
     </div>
     <div class="check"><input type="checkbox" id="task-mtw" name="mustThisWeek"><label for="task-mtw">Must this week</label></div>
     <div class="row">
-      <div class="field"><label>Project / Area</label><input name="project" placeholder="Sermon Prep, Rental Admin..."></div>
+      <div class="field"><label>Area</label>
+        <input name="project" id="task-area" list="areas-options" placeholder="pick or type new...">
+        <datalist id="areas-options"></datalist>
+      </div>
       <div class="field"><label>Status</label>
         <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
       </div>
@@ -299,7 +312,10 @@
         <input name="people" id="task-people" list="people-options" placeholder="Larry, Carol...">
         <datalist id="people-options"></datalist>
       </div>
-      <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+      <div class="field"><label>Tags</label>
+        <input name="tags" id="task-tags" list="tags-options" placeholder="pick or type new (comma-separated for multiple)">
+        <datalist id="tags-options"></datalist>
+      </div>
     </div>
     <div class="field"><label>Email URL <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — paste Gmail link)</span></label>
       <input type="url" name="emailUrl" inputmode="url" autocapitalize="off" placeholder="https://mail.google.com/mail/u/0/#inbox/...">
@@ -319,7 +335,7 @@
     <div class="field"><label>Title <span class="req">*</span></label><input name="title" required placeholder="One-line idea"></div>
     <div class="field"><label>Description / context</label><textarea name="notes"></textarea></div>
     <div class="row">
-      <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+      <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
       <div class="field"><label>Topic / MOC</label><input name="topic"></div>
     </div>
     <p class="help">// QUEUED → drains to <code>00 INBOX/Ideas/</code> + Idea Pipeline kanban when local terminal is online.</p>
@@ -400,7 +416,7 @@
     <h2>SAVE ARTICLE / VIDEO</h2>
     <div class="field"><label>URL</label><input type="url" name="url" inputmode="url" autocapitalize="off" placeholder="https://..."></div>
     <div class="field"><label>Why save this?</label><input name="why" placeholder="One-liner — connects to X"></div>
-    <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+    <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
     <div class="field"><label>Topic / MOC</label><input name="topic"></div>
     <div class="field"><label>Or paste body (no URL)</label><textarea name="body"></textarea></div>
     <p class="help">// QUEUED → fetched, summarized, written to <code>02 LITERATURE/</code> when local terminal drains the queue.</p>
@@ -425,7 +441,7 @@
       <label>Hard Deadline</label><input type="date" name="deadline">
     </div>
     <div class="field"><label>Description</label><textarea name="description"></textarea></div>
-    <div class="field"><label>Tags</label><input name="tags" placeholder="comma,separated"></div>
+    <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
   </section>
 
   <button type="submit" class="primary" id="submit-btn" disabled>SELECT TYPE</button>
@@ -439,170 +455,239 @@
 <div class="toast" id="toast"></div>
 
 <script>
+(function () {
   // ────────────────────────────────────────────────────
   // CONFIG — set this after deploying the Apps Script
   // ────────────────────────────────────────────────────
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxr51tCKEl9EYBZzHuhaTPDEpIgeSnnbTr3Rr33L1-b19Rm5zU93jPBMxwm0uVYhe-lnw/exec';
 
-  const types = document.querySelectorAll('.type-btn');
-  const sections = document.querySelectorAll('.form-section');
-  const submitBtn = document.getElementById('submit-btn');
-  const form = document.getElementById('intake-form');
   const toast = document.getElementById('toast');
-  let selectedType = null;
-
-  types.forEach(btn => {
-    btn.addEventListener('click', () => {
-      types.forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedType = btn.dataset.type;
-      sections.forEach(s => s.classList.toggle('active', s.dataset.type === selectedType));
-      submitBtn.disabled = false;
-      submitBtn.textContent = '▸ EXECUTE — ' + btn.querySelector('span:last-child').textContent;
-      if (selectedType === 'task') { loadParents(); loadPeople(); }
-      if (selectedType === 'event') { loadCalendars(); }
-      window.scrollTo({ top: btn.getBoundingClientRect().bottom + window.scrollY - 80, behavior: 'smooth' });
-    });
-  });
-
-  // Populate Parent dropdown lazily on first task-type click.
-  let parentsLoaded = false;
-  async function loadParents() {
-    if (parentsLoaded) return;
-    parentsLoaded = true;
-    try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=parents');
-      const data = await res.json();
-      if (!data.ok || !Array.isArray(data.parents)) return;
-      const sel = document.getElementById('task-parent');
-      data.parents.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p; opt.textContent = p;
-        sel.appendChild(opt);
-      });
-    } catch (err) {
-      // Silent — parent dropdown stays as "none". Form still works.
-    }
+  function showToast(msg, kind) {
+    if (!toast) { alert(msg); return; }
+    toast.textContent = msg;
+    toast.className = 'toast show ' + (kind || '');
+    setTimeout(() => toast.classList.remove('show'), 4500);
   }
 
-  // Populate Calendar dropdown lazily on first event-type click.
-  // Default (Work) is pre-selected by the Apps Script's sort + isDefault flag.
-  let calendarsLoaded = false;
-  async function loadCalendars() {
-    if (calendarsLoaded) return;
-    calendarsLoaded = true;
-    const sel = document.getElementById('event-calendar');
-    try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=calendars');
-      const data = await res.json();
-      if (!data.ok || !Array.isArray(data.calendars)) {
+  // Surface any uncaught error directly to the user instead of swallowing it.
+  // Without this, a single early throw silently breaks the entire form.
+  window.addEventListener('error', (ev) => {
+    showToast('// JS ERR · ' + (ev.message || 'unknown'), 'error');
+  });
+  window.addEventListener('unhandledrejection', (ev) => {
+    const msg = (ev.reason && ev.reason.message) || String(ev.reason);
+    showToast('// PROMISE ERR · ' + msg, 'error');
+  });
+
+  try {
+    const types = document.querySelectorAll('.type-btn');
+    const sections = document.querySelectorAll('.form-section');
+    const submitBtn = document.getElementById('submit-btn');
+    const form = document.getElementById('intake-form');
+    let selectedType = null;
+
+    types.forEach(btn => {
+      btn.addEventListener('click', () => {
+        types.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedType = btn.dataset.type;
+        sections.forEach(s => s.classList.toggle('active', s.dataset.type === selectedType));
+        submitBtn.disabled = false;
+        submitBtn.textContent = '▸ EXECUTE — ' + btn.querySelector('span:last-child').textContent;
+        if (selectedType === 'task') { loadParents(); loadLists(); }
+        if (selectedType === 'event') { loadCalendars(); }
+        if (selectedType === 'book' || selectedType === 'show' || selectedType === 'idea' || selectedType === 'clip' || selectedType === 'project') { loadLists(); }
+        window.scrollTo({ top: btn.getBoundingClientRect().bottom + window.scrollY - 80, behavior: 'smooth' });
+      });
+    });
+
+    // Lazy fetchers — populate dropdowns on first relevant type click.
+    let parentsLoaded = false;
+    async function loadParents() {
+      if (parentsLoaded) return;
+      parentsLoaded = true;
+      try {
+        const res = await fetch(APPS_SCRIPT_URL + '?action=parents');
+        const data = await res.json();
+        if (!data.ok || !Array.isArray(data.parents)) return;
+        const sel = document.getElementById('task-parent');
+        data.parents.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p; opt.textContent = p;
+          sel.appendChild(opt);
+        });
+      } catch (err) { /* dropdown stays at "none"; form still works */ }
+    }
+
+    let calendarsLoaded = false;
+    async function loadCalendars() {
+      if (calendarsLoaded) return;
+      calendarsLoaded = true;
+      const sel = document.getElementById('event-calendar');
+      try {
+        const res = await fetch(APPS_SCRIPT_URL + '?action=calendars');
+        const data = await res.json();
+        if (!data.ok || !Array.isArray(data.calendars)) {
+          sel.innerHTML = '<option value="">— default —</option>';
+          return;
+        }
+        sel.innerHTML = '';
+        data.calendars.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name + (c.isDefault ? ' (default)' : '');
+          if (c.isDefault) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } catch (err) {
         sel.innerHTML = '<option value="">— default —</option>';
+      }
+    }
+
+    // Single fetch populates Areas, Tags, People datalists.
+    let listsLoaded = false;
+    async function loadLists() {
+      if (listsLoaded) return;
+      listsLoaded = true;
+      try {
+        const res = await fetch(APPS_SCRIPT_URL + '?action=lists');
+        const data = await res.json();
+        if (!data.ok) return;
+        const fillDatalist = (id, items) => {
+          const dl = document.getElementById(id);
+          if (!dl || !Array.isArray(items)) return;
+          dl.innerHTML = '';
+          items.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            dl.appendChild(opt);
+          });
+        };
+        fillDatalist('areas-options', data.areas);
+        fillDatalist('tags-options', data.tags);
+        fillDatalist('people-options', data.people);
+      } catch (err) { /* free-text inputs still work */ }
+    }
+
+    // Recurrence-help toggle (TASK section).
+    const recurrenceSel = document.querySelector('select[name="recurrence"]');
+    if (recurrenceSel) {
+      recurrenceSel.addEventListener('change', (e) => {
+        const help = document.getElementById('recurrence-help');
+        if (help) help.style.display = e.target.value ? 'block' : 'none';
+      });
+    }
+
+    // Project-kind toggle (PROJECT section).
+    const projKind = document.getElementById('project-kind');
+    if (projKind) {
+      projKind.addEventListener('change', (e) => {
+        const cs = document.getElementById('creative-subtype');
+        const ad = document.getElementById('admin-deadline');
+        if (cs) cs.style.display = e.target.value === 'creative' ? 'block' : 'none';
+        if (ad) ad.style.display = e.target.value === 'admin' ? 'block' : 'none';
+      });
+    }
+
+    function collect(section) {
+      const out = {};
+      section.querySelectorAll('input, select, textarea').forEach(el => {
+        if (el.type === 'checkbox') out[el.name] = el.checked;
+        else if (el.value) out[el.name] = el.value;
+      });
+      return out;
+    }
+
+    async function doSubmit() {
+      if (!selectedType) {
+        showToast('// ERR · pick a type first', 'error');
         return;
       }
-      sel.innerHTML = '';
-      data.calendars.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name + (c.isDefault ? ' (default)' : '');
-        if (c.isDefault) opt.selected = true;
-        sel.appendChild(opt);
-      });
-    } catch (err) {
-      sel.innerHTML = '<option value="">— default —</option>';
-    }
-  }
+      const section = document.querySelector('.form-section.active');
+      if (!section) {
+        showToast('// ERR · no active section (state desynced)', 'error');
+        return;
+      }
+      // Browser HTML5 validation (required title, etc.). If invalid, surface why.
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        showToast('// ERR · fill required fields', 'error');
+        return;
+      }
+      const data = collect(section);
 
-  // Populate People datalist lazily on first task-type click.
-  let peopleLoaded = false;
-  async function loadPeople() {
-    if (peopleLoaded) return;
-    peopleLoaded = true;
-    try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=people');
-      const data = await res.json();
-      if (!data.ok || !Array.isArray(data.people)) return;
-      const dl = document.getElementById('people-options');
-      data.people.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        dl.appendChild(opt);
-      });
-    } catch (err) {
-      // Silent — datalist stays empty. Free-text input still works.
-    }
-  }
+      let submissionType = selectedType;
+      if (selectedType === 'project') {
+        if (data.projectKind === 'creative') submissionType = 'creative-project';
+        else if (data.projectKind === 'admin') submissionType = 'admin-project';
+        else { showToast('// ERR · pick a project type', 'error'); return; }
+        delete data.projectKind;
+      }
 
-  // Show help text under recurrence dropdown when a value is picked.
-  document.querySelector('select[name="recurrence"]').addEventListener('change', (e) => {
-    document.getElementById('recurrence-help').style.display = e.target.value ? 'block' : 'none';
-  });
+      const payload = Object.assign({ submissionType }, data);
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'TRANSMITTING...';
+      showToast('// SENDING · ' + submissionType, '');
 
-  document.getElementById('project-kind').addEventListener('change', (e) => {
-    document.getElementById('creative-subtype').style.display = e.target.value === 'creative' ? 'block' : 'none';
-    document.getElementById('admin-deadline').style.display = e.target.value === 'admin' ? 'block' : 'none';
-  });
-
-  function showToast(msg, kind) {
-    toast.textContent = msg;
-    toast.className = 'toast show ' + kind;
-    setTimeout(() => toast.classList.remove('show'), 3500);
-  }
-
-  function collect(section) {
-    const out = {};
-    section.querySelectorAll('input, select, textarea').forEach(el => {
-      if (el.type === 'checkbox') out[el.name] = el.checked;
-      else if (el.value) out[el.name] = el.value;
-    });
-    return out;
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!selectedType) return;
-    const section = document.querySelector('.form-section.active');
-    const data = collect(section);
-
-    let submissionType = selectedType;
-    if (selectedType === 'project') {
-      if (data.projectKind === 'creative') submissionType = 'creative-project';
-      else if (data.projectKind === 'admin') submissionType = 'admin-project';
-      else { showToast('// ERR: Pick a project type', 'error'); return; }
-      delete data.projectKind;
-    }
-
-    const payload = Object.assign({ submissionType }, data);
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'TRANSMITTING...';
-
-    try {
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-      });
-      const result = await res.json();
-      if (result.ok) {
-        showToast('// OK · ' + (result.target || 'WRITTEN'), 'success');
-        form.reset();
-        document.getElementById('recurrence-help').style.display = 'none';
-        types.forEach(b => b.classList.remove('selected'));
-        sections.forEach(s => s.classList.remove('active'));
-        selectedType = null;
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'SELECT TYPE';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        showToast('// ERR · ' + (result.error || 'FAILED'), 'error');
+      try {
+        const res = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          // Content-Type text/plain keeps the request CORS-simple (no preflight).
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload),
+          redirect: 'follow',
+        });
+        // If Google redirected to login (auth not done), response will be HTML.
+        const text = await res.text();
+        let result;
+        try { result = JSON.parse(text); }
+        catch (parseErr) {
+          showToast('// AUTH? · response was HTML not JSON — open the Web App URL in this same browser/tab once and tap Allow', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '▸ RETRY';
+          return;
+        }
+        if (result.ok) {
+          showToast('// OK · ' + (result.target || 'WRITTEN'), 'success');
+          form.reset();
+          const help = document.getElementById('recurrence-help');
+          if (help) help.style.display = 'none';
+          types.forEach(b => b.classList.remove('selected'));
+          sections.forEach(s => s.classList.remove('active'));
+          selectedType = null;
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'SELECT TYPE';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          showToast('// ERR · ' + (result.error || 'FAILED'), 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '▸ RETRY';
+        }
+      } catch (err) {
+        showToast('// NET_ERR · ' + (err.message || 'fetch failed'), 'error');
         submitBtn.disabled = false;
         submitBtn.textContent = '▸ RETRY';
       }
-    } catch (err) {
-      showToast('// NET_ERR · ' + err.message, 'error');
-      submitBtn.disabled = false;
-      submitBtn.textContent = '▸ RETRY';
     }
-  });
+
+    // Two ways to fire the submission — form-level submit (Enter key) AND
+    // direct button click (defensive against any clip-path or pointer-event
+    // weirdness around the form-submit event).
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      doSubmit();
+    });
+    submitBtn.addEventListener('click', (e) => {
+      // If the form's submit fires too, doSubmit gets called twice — but
+      // it's idempotent (selectedType is reset on success).
+      // Force the click to act regardless of native form-submit edge cases.
+      e.preventDefault();
+      doSubmit();
+    });
+  } catch (initErr) {
+    showToast('// INIT ERR · ' + (initErr.message || 'script init failed'), 'error');
+  }
+})();
 </script>
 
 </body>
