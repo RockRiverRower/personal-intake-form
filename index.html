@@ -198,6 +198,96 @@
       box-shadow: none; cursor: not-allowed;
     }
 
+    /* ── Chip-select widget ────────────────────────────
+       Click-to-pick dropdown with selected items as chips.
+       Replaces <datalist> which is broken on Safari (text-autocomplete only).
+       Single source of truth: hidden input with comma-separated value.
+    ─────────────────────────────────────────────────── */
+    .chip-select { position: relative; }
+    .chip-display {
+      min-height: var(--tap); padding: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip-select.open .chip-display,
+    .chip-display:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px var(--cyan), 0 0 16px rgba(0, 245, 255, 0.4);
+      background: var(--card-2);
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 6px 4px 10px;
+      background: rgba(0, 245, 255, 0.15);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.04em;
+      max-width: 100%;
+    }
+    .chip-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .chip-x {
+      cursor: pointer; color: var(--magenta); font-weight: 900;
+      padding: 0 4px; font-size: 16px; line-height: 1;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip-add-btn {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s ease;
+    }
+    .chip-add-btn:hover { color: var(--cyan); border-color: var(--cyan); }
+    .chip-popover {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--card-2);
+      border: 1px solid var(--cyan);
+      max-height: 320px; overflow-y: auto;
+      display: none;
+      z-index: 50;
+      box-shadow: 0 4px 24px rgba(0, 245, 255, 0.3), 0 0 0 1px var(--cyan);
+    }
+    .chip-select.open .chip-popover { display: block; }
+    .chip-popover-search {
+      position: sticky; top: 0;
+      padding: 8px;
+      background: var(--card-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .chip-popover-search input {
+      width: 100%; min-height: 40px; padding: 8px 10px;
+      font-size: 14px;
+    }
+    .chip-options { padding: 4px 0; }
+    .chip-option {
+      padding: 12px 14px;
+      cursor: pointer;
+      color: var(--text);
+      display: flex; align-items: center; gap: 10px;
+      font-size: 16px;
+      border-bottom: 1px solid rgba(0, 245, 255, 0.06);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip-option:last-child { border-bottom: none; }
+    .chip-option:hover { background: rgba(0, 245, 255, 0.1); }
+    .chip-option.selected { background: rgba(0, 245, 255, 0.18); color: var(--cyan); font-weight: 700; }
+    .chip-option.selected::before { content: '✓'; color: var(--cyan); font-weight: 900; }
+    .chip-option:not(.selected)::before { content: ''; display: inline-block; width: 12px; }
+    .chip-option.add-new {
+      color: var(--magenta); font-style: italic;
+      border-top: 1px solid var(--border); margin-top: 4px;
+    }
+    .chip-option.add-new::before { content: '+'; color: var(--magenta); font-weight: 900; }
+    .chip-option.empty { color: var(--muted); font-style: italic; cursor: default; pointer-events: none; }
+
     .toast {
       position: fixed; left: 16px; right: 16px; bottom: 16px;
       padding: 16px 18px;
@@ -282,8 +372,14 @@
     <div class="check"><input type="checkbox" id="task-mtw" name="mustThisWeek"><label for="task-mtw">Must this week</label></div>
     <div class="row">
       <div class="field"><label>Area</label>
-        <input name="project" id="task-area" list="areas-options" placeholder="pick or type new...">
-        <datalist id="areas-options"></datalist>
+        <div class="chip-select" data-source="areas" data-multi="false" data-placeholder="+ pick area">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick area</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="project" value="">
+        </div>
       </div>
       <div class="field"><label>Status</label>
         <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
@@ -308,13 +404,25 @@
       </div>
     </div>
     <div class="row">
-      <div class="field"><label>People <span style="color:var(--muted);text-transform:none;font-weight:400;">(person or comma-separated)</span></label>
-        <input name="people" id="task-people" list="people-options" placeholder="Larry, Carol...">
-        <datalist id="people-options"></datalist>
+      <div class="field"><label>People</label>
+        <div class="chip-select" data-source="people" data-multi="true" data-placeholder="+ pick people">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick people</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="people" value="">
+        </div>
       </div>
       <div class="field"><label>Tags</label>
-        <input name="tags" id="task-tags" list="tags-options" placeholder="pick or type new (comma-separated for multiple)">
-        <datalist id="tags-options"></datalist>
+        <div class="chip-select" data-source="tags" data-multi="true" data-placeholder="+ pick tags">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick tags</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="tags" value="">
+        </div>
       </div>
     </div>
     <div class="field"><label>Email URL <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — paste Gmail link)</span></label>
@@ -335,7 +443,16 @@
     <div class="field"><label>Title <span class="req">*</span></label><input name="title" required placeholder="One-line idea"></div>
     <div class="field"><label>Description / context</label><textarea name="notes"></textarea></div>
     <div class="row">
-      <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
+      <div class="field"><label>Tags</label>
+        <div class="chip-select" data-source="tags" data-multi="true" data-placeholder="+ pick tags">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick tags</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="tags" value="">
+        </div>
+      </div>
       <div class="field"><label>Topic / MOC</label><input name="topic"></div>
     </div>
     <p class="help">// QUEUED → drains to <code>00 INBOX/Ideas/</code> + Idea Pipeline kanban when local terminal is online.</p>
@@ -416,7 +533,16 @@
     <h2>SAVE ARTICLE / VIDEO</h2>
     <div class="field"><label>URL</label><input type="url" name="url" inputmode="url" autocapitalize="off" placeholder="https://..."></div>
     <div class="field"><label>Why save this?</label><input name="why" placeholder="One-liner — connects to X"></div>
-    <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
+    <div class="field"><label>Tags</label>
+        <div class="chip-select" data-source="tags" data-multi="true" data-placeholder="+ pick tags">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick tags</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="tags" value="">
+        </div>
+      </div>
     <div class="field"><label>Topic / MOC</label><input name="topic"></div>
     <div class="field"><label>Or paste body (no URL)</label><textarea name="body"></textarea></div>
     <p class="help">// QUEUED → fetched, summarized, written to <code>02 LITERATURE/</code> when local terminal drains the queue.</p>
@@ -441,7 +567,16 @@
       <label>Hard Deadline</label><input type="date" name="deadline">
     </div>
     <div class="field"><label>Description</label><textarea name="description"></textarea></div>
-    <div class="field"><label>Tags</label><input name="tags" list="tags-options" placeholder="pick or type new (comma-separated)"></div>
+    <div class="field"><label>Tags</label>
+        <div class="chip-select" data-source="tags" data-multi="true" data-placeholder="+ pick tags">
+          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick tags</button></div>
+          <div class="chip-popover">
+            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+            <div class="chip-options"></div>
+          </div>
+          <input type="hidden" name="tags" value="">
+        </div>
+      </div>
   </section>
 
   <button type="submit" class="primary" id="submit-btn" disabled>SELECT TYPE</button>
@@ -544,30 +679,196 @@
       }
     }
 
-    // Single fetch populates Areas, Tags, People datalists.
-    let listsLoaded = false;
-    async function loadLists() {
-      if (listsLoaded) return;
-      listsLoaded = true;
-      try {
-        const res = await fetch(APPS_SCRIPT_URL + '?action=lists');
-        const data = await res.json();
-        if (!data.ok) return;
-        const fillDatalist = (id, items) => {
-          const dl = document.getElementById(id);
-          if (!dl || !Array.isArray(items)) return;
-          dl.innerHTML = '';
-          items.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v;
-            dl.appendChild(opt);
-          });
-        };
-        fillDatalist('areas-options', data.areas);
-        fillDatalist('tags-options', data.tags);
-        fillDatalist('people-options', data.people);
-      } catch (err) { /* free-text inputs still work */ }
+    // ── Chip-select widgets ───────────────────────────
+    // One shared cache for the lists endpoint (areas/tags/people).
+    let listsCache = null;
+    let listsPromise = null;
+    async function fetchLists() {
+      if (listsCache) return listsCache;
+      if (listsPromise) return listsPromise;
+      listsPromise = (async () => {
+        try {
+          const res = await fetch(APPS_SCRIPT_URL + '?action=lists');
+          const data = await res.json();
+          if (data && data.ok) {
+            listsCache = { areas: data.areas || [], tags: data.tags || [], people: data.people || [] };
+          } else {
+            listsCache = { areas: [], tags: [], people: [], error: (data && data.error) || 'unknown' };
+          }
+        } catch (err) {
+          listsCache = { areas: [], tags: [], people: [], error: err.message };
+        }
+        return listsCache;
+      })();
+      return listsPromise;
     }
+
+    function loadLists() { return fetchLists(); }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function setupChipSelect(container) {
+      const source = container.dataset.source;        // 'areas' | 'tags' | 'people'
+      const multi = container.dataset.multi === 'true';
+      const placeholder = container.dataset.placeholder || '+ pick';
+      const display = container.querySelector('.chip-display');
+      const addBtn = container.querySelector('.chip-add-btn');
+      const popover = container.querySelector('.chip-popover');
+      const searchInput = popover.querySelector('input');
+      const optionsContainer = popover.querySelector('.chip-options');
+      const hidden = container.querySelector('input[type="hidden"]');
+      let selected = []; // canonical state: array of strings
+
+      // Sync to hidden input as comma-separated.
+      function syncHidden() { hidden.value = selected.join(', '); }
+
+      // Render chips in the display.
+      function renderChips() {
+        // Remove existing chip elements (keep the add button)
+        Array.from(display.querySelectorAll('.chip')).forEach(c => c.remove());
+        selected.forEach(v => {
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          const text = document.createElement('span');
+          text.className = 'chip-text';
+          text.textContent = v;
+          const x = document.createElement('span');
+          x.className = 'chip-x';
+          x.textContent = '×';
+          x.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selected = selected.filter(s => s !== v);
+            syncHidden();
+            renderChips();
+            renderOptions(searchInput.value);
+          });
+          chip.appendChild(text);
+          chip.appendChild(x);
+          display.insertBefore(chip, addBtn);
+        });
+        addBtn.textContent = selected.length === 0 ? placeholder : '+';
+      }
+
+      // Render the options panel.
+      function renderOptions(filter = '') {
+        optionsContainer.innerHTML = '';
+        if (!listsCache) {
+          const el = document.createElement('div');
+          el.className = 'chip-option empty';
+          el.textContent = 'loading…';
+          optionsContainer.appendChild(el);
+          return;
+        }
+        if (listsCache.error) {
+          const el = document.createElement('div');
+          el.className = 'chip-option empty';
+          el.textContent = '⚠ failed: ' + listsCache.error.slice(0, 80);
+          optionsContainer.appendChild(el);
+          return;
+        }
+        const all = listsCache[source] || [];
+        const f = filter.trim().toLowerCase();
+        const matches = all.filter(o => o.toLowerCase().includes(f));
+        if (matches.length === 0 && !f) {
+          const el = document.createElement('div');
+          el.className = 'chip-option empty';
+          el.textContent = '(no entries — type to add a new one)';
+          optionsContainer.appendChild(el);
+        }
+        matches.forEach(opt => {
+          const el = document.createElement('div');
+          el.className = 'chip-option' + (selected.includes(opt) ? ' selected' : '');
+          el.textContent = opt;
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleOption(opt);
+          });
+          optionsContainer.appendChild(el);
+        });
+        // "+ Add new" option when filter doesn't exactly match any existing
+        if (f && !all.some(o => o.toLowerCase() === f)) {
+          const el = document.createElement('div');
+          el.className = 'chip-option add-new';
+          el.textContent = `Add "${filter.trim()}"`;
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const v = filter.trim();
+            if (!listsCache[source].includes(v)) listsCache[source].unshift(v);
+            toggleOption(v);
+            searchInput.value = '';
+            renderOptions('');
+          });
+          optionsContainer.appendChild(el);
+        }
+      }
+
+      function toggleOption(opt) {
+        const i = selected.indexOf(opt);
+        if (i >= 0) {
+          selected.splice(i, 1);
+        } else {
+          if (multi) selected.push(opt);
+          else { selected = [opt]; close(); }
+        }
+        syncHidden();
+        renderChips();
+        renderOptions(searchInput.value);
+      }
+
+      function open() {
+        container.classList.add('open');
+        // Ensure the lists are fetched before showing options.
+        if (listsCache) {
+          renderOptions('');
+          setTimeout(() => searchInput.focus(), 50);
+        } else {
+          renderOptions('');
+          loadLists().then(() => renderOptions(searchInput.value));
+        }
+      }
+      function close() {
+        container.classList.remove('open');
+        searchInput.value = '';
+      }
+
+      // Click on the entire display area (or add button) opens the popover.
+      display.addEventListener('click', (e) => {
+        // Don't toggle if the click was on a chip's X.
+        if (e.target.classList.contains('chip-x')) return;
+        if (container.classList.contains('open')) close();
+        else open();
+      });
+      // Filter as you type
+      searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+      // Enter on a single match selects it
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const f = searchInput.value.trim().toLowerCase();
+          const matches = (listsCache && listsCache[source] ? listsCache[source] : []).filter(o => o.toLowerCase().includes(f));
+          if (matches.length === 1) toggleOption(matches[0]);
+          else if (f && !matches.some(o => o.toLowerCase() === f)) {
+            // Add new
+            if (!listsCache[source].includes(searchInput.value.trim())) listsCache[source].unshift(searchInput.value.trim());
+            toggleOption(searchInput.value.trim());
+            searchInput.value = '';
+            renderOptions('');
+          }
+        }
+        if (e.key === 'Escape') close();
+      });
+      // Outside click closes
+      document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) close();
+      });
+
+      renderChips();
+    }
+
+    // Wire up every chip-select on the page.
+    document.querySelectorAll('.chip-select').forEach(setupChipSelect);
 
     // Recurrence-help toggle (TASK section).
     const recurrenceSel = document.querySelector('select[name="recurrence"]');
@@ -608,11 +909,18 @@
         showToast('// ERR · no active section (state desynced)', 'error');
         return;
       }
-      // Browser HTML5 validation (required title, etc.). If invalid, surface why.
-      if (!form.checkValidity()) {
-        form.reportValidity();
-        showToast('// ERR · fill required fields', 'error');
-        return;
+      // Validate ONLY the active section. Required fields in hidden sections
+      // (e.g., EVENT's `start` when TASK is active) would otherwise block submit
+      // — Safari validates display:none required inputs.
+      const required = section.querySelectorAll('[required]');
+      for (const f of required) {
+        if (!f.value || (f.checkValidity && !f.checkValidity())) {
+          if (f.reportValidity) f.reportValidity();
+          else f.focus();
+          const lbl = (f.closest('.field') || section).querySelector('label');
+          showToast('// ERR · fill required field: ' + (lbl ? lbl.textContent.replace('*','').trim() : f.name), 'error');
+          return;
+        }
       }
       const data = collect(section);
 
