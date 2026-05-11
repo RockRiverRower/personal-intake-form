@@ -369,7 +369,14 @@
         <select name="energy"><option value="">—</option><option>Quick</option><option>Normal</option><option>Deep</option></select>
       </div>
     </div>
-    <div class="check"><input type="checkbox" id="task-mtw" name="mustThisWeek"><label for="task-mtw">Must this week</label></div>
+    <div class="row">
+      <div class="field"><label>Urgency</label>
+        <div class="check"><input type="checkbox" id="task-urgent" name="urgent"><label for="task-urgent">Urgent (needs attention soon, regardless of date)</label></div>
+      </div>
+      <div class="field"><label>Impact</label>
+        <select name="impact"><option value="">—</option><option value="H">H — high</option><option value="M">M — medium</option><option value="L">L — low</option></select>
+      </div>
+    </div>
     <div class="row">
       <div class="field"><label>Area</label>
         <div class="chip-select" data-source="areas" data-multi="false" data-placeholder="+ pick area">
