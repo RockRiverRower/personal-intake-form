@@ -358,6 +358,20 @@
     <h2>NEW TASK</h2>
     <div class="field"><label>Title <span class="req">*</span></label><input name="title" required></div>
     <div class="row">
+      <div class="field"><label>Type</label>
+        <select name="taskType">
+          <option value="Task">Task</option>
+          <option value="Project">Project</option>
+          <option value="Routine">Routine</option>
+          <option value="Event">Event</option>
+          <option value="Worship">Worship</option>
+        </select>
+      </div>
+      <div class="field"><label>Status</label>
+        <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
+      </div>
+    </div>
+    <div class="row">
       <div class="field"><label>Intended Date</label><input type="date" name="intendedDate"></div>
       <div class="field"><label>Hard Deadline</label><input type="date" name="deadline"></div>
     </div>
@@ -377,19 +391,14 @@
         <select name="impact"><option value="">—</option><option value="H">H — high</option><option value="M">M — medium</option><option value="L">L — low</option></select>
       </div>
     </div>
-    <div class="row">
-      <div class="field"><label>Area</label>
-        <div class="chip-select" data-source="areas" data-multi="false" data-placeholder="+ pick area">
-          <div class="chip-display"><button type="button" class="chip-add-btn">+ pick area</button></div>
-          <div class="chip-popover">
-            <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
-            <div class="chip-options"></div>
-          </div>
-          <input type="hidden" name="project" value="">
+    <div class="field"><label>Area</label>
+      <div class="chip-select" data-source="areas" data-multi="false" data-placeholder="+ pick area">
+        <div class="chip-display"><button type="button" class="chip-add-btn">+ pick area</button></div>
+        <div class="chip-popover">
+          <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
+          <div class="chip-options"></div>
         </div>
-      </div>
-      <div class="field"><label>Status</label>
-        <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
+        <input type="hidden" name="project" value="">
       </div>
     </div>
     <div class="row">
