@@ -368,7 +368,7 @@
         </select>
       </div>
       <div class="field"><label>Status</label>
-        <select name="status"><option>Inbox</option><option>Next</option><option>In Progress</option><option>Waiting</option><option>Someday</option></select>
+        <select name="status"><option>01 Inbox</option><option>02 In Progress</option><option>03 Next</option><option>04 Waiting</option><option>05 Someday</option></select>
       </div>
     </div>
     <div class="row">
@@ -398,12 +398,12 @@
           <div class="chip-popover-search"><input type="text" placeholder="search or add new..."></div>
           <div class="chip-options"></div>
         </div>
-        <input type="hidden" name="project" value="">
+        <input type="hidden" name="area" value="">
       </div>
     </div>
     <div class="row">
       <div class="field"><label>Project <span style="color:var(--muted);text-transform:none;font-weight:400;">(optional — links this task to a larger project)</span></label>
-        <select name="parent" id="task-parent">
+        <select name="project" id="task-parent">
           <option value="">— none (standalone) —</option>
         </select>
       </div>
